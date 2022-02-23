@@ -131,16 +131,11 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--data_out', default='mm_out.txt')
     parser.add_argument('-n')
     parser.add_argument('-k')
-    parser.add_argument('--multi_node', action="store_true")
     parser.add_argument('--debug', action="store_true")
     pargs = parser.parse_args()
 
-    if pargs.multi_node:
-        mapper_ranks = range(2, 4)
-        reducer_ranks = range(1, 2)
-    else:
-        mapper_ranks = range(5, 16)
-        reducer_ranks = range(1, 5)
+    mapper_ranks = range(5, 16)
+    reducer_ranks = range(1, 5)
 
     # MPI setup
     comm = MPI.COMM_WORLD
