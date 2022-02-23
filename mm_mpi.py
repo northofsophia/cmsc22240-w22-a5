@@ -10,13 +10,13 @@ from mpi4py import MPI
 
 
 # In this function, you seperate matrix into k submatrices and return the array
-# The last matrix can be smaller than (n//k)x10
+# The last matrix can have different dimension than (n//k)x10
 # Note: you should not hardcode the dimension 10.
 # Inputs:
 #   matrix => nx10 matrix
 #   k      => rows per submatrix
 # Output:
-#   List of (n//k)x10 submatrices
+#   k number of (n//k)x10 submatrices
 def create_submatrices(matrix, k):
     submatrices = []
     # TODO: complete this function
