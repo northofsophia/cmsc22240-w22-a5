@@ -11,6 +11,7 @@ from mpi4py import MPI
 
 # In this function, you seperate matrix into k submatrices and return the array
 # The last matrix can be smaller than (n//k)x10
+# Note: you should not hardcode the dimension 10.
 # Inputs:
 #   matrix => nx10 matrix
 #   k      => rows per submatrix
@@ -19,11 +20,12 @@ from mpi4py import MPI
 def create_submatrices(matrix, k):
     submatrices = []
     # TODO: complete this function
-    print("Delete me when complete")
+    print("Remove me when finish!")
     return submatrices
 
 
 # In this function, you calculate the matrix multiplication of transpose(matrix)*matrix
+# Note: you should not hardcode the dimension 10.
 # Hint: you should not need to actually transpose the matrix, just index it differently
 # Input:
 #   matrix => [[...], [...], ...]
@@ -32,92 +34,33 @@ def create_submatrices(matrix, k):
 def multiply_rows(matrix):
     partial_matrix = []
     # TODO: complete this function
-    print("Delete me when complete")
+    print("Remove me when finish!")
     return partial_matrix
 
 
 # In this function, you sum up 2 partial matrices
+# Note: you should not hardcode the dimension 10.
 # Input:
 #   Two 10x10 partial matrices
 # Output:
 #   A 10x10 summed/reduced matrix
-def sum_partial_matrices(accumulated_matrix, partial_matrix):
-    if len(accumulated_matrix) == 0:
-        return partial_matrix
+def sum_partial_matrices(part_mat_a, part_mat_b):
+    if len(part_mat_a) == 0:
+        return part_mat_b
     # TODO: complete this function
-    print("Delete me when complete")
-
-
-def master_op():
-    submatrices = create_submatrices(matrix, int(pargs.k))
-
-    # send sub-matrices
-    debug_print('Rank =', rank, 'Master', 'Sending')
-    for i, subm in enumerate(submatrices):
-        comm.send(subm, dest=mapper_ranks[i % len(mapper_ranks)], tag=1)
-
-    # end signal for mappers
-    debug_print('Rank =', rank, 'Master', 'Signal mappers end')
-    for i in mapper_ranks:
-        comm.send([[0]], dest=i, tag=0)
-
-    # wait mappers to finish
-    debug_print('Rank =', rank, 'Master', 'Wait all mappers to complete')
-    for i in mapper_ranks:
-        comm.recv(source=i, tag=4)
-
-    # end signal for reducers
-    debug_print('Rank =', rank, 'Master', 'Signal reducers end')
-    for i in reducer_ranks:
-        comm.send([[0]], dest=i, tag=0)
-
-    # receive & sum
-    debug_print('Rank =', rank, 'Master', 'Reducing')
-    res = []
-    for i in reducer_ranks:
-        partm = comm.recv(source=i, tag=3)
-        if len(partm) > 0:
-            res = sum_partial_matrices(res, partm)
-    debug_print('Rank =', rank, 'Master', 'DONE')
+    print("Remove me when finish!")
     return res
 
 
-def mapper_op():
-    cnt = 0
-    status = MPI.Status()
-    while True:
-        debug_print('Rank =', rank, 'Mapper', 'Receiving')
-        subm = comm.recv(source=0, status=status)
-        if status.Get_tag() == 0:
-            # end signal
-            comm.send([[0]], dest=0, tag=4)
-            debug_print('Rank =', rank, 'Mapper', 'DONE')
-            return
-        elif status.Get_tag() == 1:
-            debug_print('Rank =', rank, 'Mapper', 'Multiplying')
-            # send for reduction
-            partm = multiply_rows(subm)
-            comm.send(partm, dest=reducer_ranks[cnt % len(reducer_ranks)], tag=2)
-            cnt += 1
-
-
-def reducer_op():
-    status = MPI.Status()
-    acc_partm = []
-    while True:
-        debug_print('Rank =', rank, 'Reducer', 'Receiving')
-        partm = comm.recv(status=status)
-        if status.Get_tag() == 0:
-            break
-        elif status.Get_tag() == 2:
-            # do reduction
-            debug_print('Rank =', rank, 'Reducer', 'Reducing')
-            acc_partm = sum_partial_matrices(acc_partm, partm)
-
-    # send the results back to master
-    comm.send(acc_partm, dest=0, tag=3)
-    debug_print('Rank =', rank, 'Reducer', 'DONE')
-    return
+def mpi_mm():
+    if rank == 0:
+        submats = create_submatrices(matrix, int(pargs.k))
+    else:
+        submats = None
+    submat = comm.scatter(submats, root=0)
+    partmat = multiply_rows(submat)
+    resmat = comm.reduce(partmat, op=mat_redu_op)
+    return resmat
 
 
 def debug_print(*args):
@@ -131,52 +74,48 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--data_out', default='mm_out.txt')
     parser.add_argument('-n')
     parser.add_argument('-k')
-    parser.add_argument('--multi_node', action="store_true")
     parser.add_argument('--debug', action="store_true")
     pargs = parser.parse_args()
-
-    if pargs.multi_node:
-        mapper_ranks = range(8, 32)
-        reducer_ranks = range(1, 8)
-    else:
-        mapper_ranks = range(5, 16)
-        reducer_ranks = range(1, 5)
 
     # MPI setup
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-
-    # Read matrix up to Nx10
-    matrix = []
-    with open(pargs.data_in, 'r') as f:
-        for i, ln in enumerate(f):
-            if i >= int(pargs.n):
-                break
-            matrix.append([float(j) for j in ln.split(' ') if j.strip()])
-
+    mat_redu_op = MPI.Op.Create(lambda a, b, dt: sum_partial_matrices(a, b), commute=True)
     debug_print('Rank =', rank, 'Node name =', MPI.Get_processor_name())
+
+    matrix = []
     if rank == 0:
+        # Read matrix up to Nx10
+        with open(pargs.data_in, 'r') as f:
+            for i, ln in enumerate(f):
+                if i >= int(pargs.n):
+                    break
+                matrix.append([float(j) for j in ln.split(' ') if j.strip()])
         # Master
         print("=== COMPUTATION STARTS ===")
         print("==> Input file:", pargs.data_in)
         print("==> n =", pargs.n)
         print("==> k =", pargs.k)
-        t1 = time.time()
-        out_mat = master_op()
+
+    # Wait all processes are ready
+    comm.barrier()
+    t1 = time.time()
+
+    # Compute
+    res_mat = mpi_mm()
+
+    # Wait all processes to finish
+    comm.barrier()
+
+    if rank == 0:
         t2 = time.time()
         print("=== COMPUTATION COMPLETE ===")
         # Write results to file
         with open(pargs.data_out, 'w') as f:
-            for row in out_mat:
+            for row in res_mat:
                 for elem in row:
                     f.write('%.6f ' % elem)
                 f.write('\n')
         print("==> Result matrix written to:", pargs.data_out)
         print('==> Time elapsed = %.4f s' % (t2 - t1))
         print("=== PROGRAM ENDS ===")
-    elif rank in reducer_ranks:
-        # Reducers
-        reducer_op()
-    elif rank in mapper_ranks:
-        # Mappers
-        mapper_op()
