@@ -19,6 +19,7 @@ from mpi4py import MPI
 def create_submatrices(matrix, k):
     submatrices = []
     # TODO: complete this function
+    print("Delete me when complete")
     return submatrices
 
 
@@ -31,18 +32,20 @@ def create_submatrices(matrix, k):
 def multiply_rows(matrix):
     partial_matrix = []
     # TODO: complete this function
+    print("Delete me when complete")
     return partial_matrix
 
 
-# In this function, you sum up all partial matrices to get the result
+# In this function, you sum up 2 partial matrices
 # Input:
-#   List of 10x10 partial matrices
+#   Two 10x10 partial matrices
 # Output:
 #   A 10x10 summed/reduced matrix
-def sum_partial_matrices(partial_matrices):
-    if len(partial_matrices) == 0:
-        return []
+def sum_partial_matrices(accumulated_matrix, partial_matrix):
+    if len(accumulated_matrix) == 0:
+        return partial_matrix
     # TODO: complete this function
+    print("Delete me when complete")
 
 
 def master_op():
@@ -70,12 +73,11 @@ def master_op():
 
     # receive & sum
     debug_print('Rank =', rank, 'Master', 'Reducing')
-    all_partm = []
+    res = []
     for i in reducer_ranks:
         partm = comm.recv(source=i, tag=3)
         if len(partm) > 0:
-            all_partm.append(partm)
-    res = sum_partial_matrices(all_partm)
+            res = sum_partial_matrices(res, partm)
     debug_print('Rank =', rank, 'Master', 'DONE')
     return res
 
@@ -101,21 +103,19 @@ def mapper_op():
 
 def reducer_op():
     status = MPI.Status()
-    all_partm = []
+    acc_partm = []
     while True:
         debug_print('Rank =', rank, 'Reducer', 'Receiving')
         partm = comm.recv(status=status)
         if status.Get_tag() == 0:
             break
         elif status.Get_tag() == 2:
-            debug_print('Rank =', rank, 'Reducer', 'Collecting')
-            all_partm.append(partm)
+            # do reduction
+            debug_print('Rank =', rank, 'Reducer', 'Reducing')
+            acc_partm = sum_partial_matrices(acc_partm, partm)
 
-    # do reduction
-    debug_print('Rank =', rank, 'Reducer', 'Reducing')
-    partm_sum = sum_partial_matrices(all_partm)
     # send the results back to master
-    comm.send(partm_sum, dest=0, tag=3)
+    comm.send(acc_partm, dest=0, tag=3)
     debug_print('Rank =', rank, 'Reducer', 'DONE')
     return
 
@@ -131,11 +131,16 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--data_out', default='mm_out.txt')
     parser.add_argument('-n')
     parser.add_argument('-k')
+    parser.add_argument('--multi_node', action="store_true")
     parser.add_argument('--debug', action="store_true")
     pargs = parser.parse_args()
 
-    mapper_ranks = range(5, 16)
-    reducer_ranks = range(1, 5)
+    if pargs.multi_node:
+        mapper_ranks = range(8, 32)
+        reducer_ranks = range(1, 8)
+    else:
+        mapper_ranks = range(5, 16)
+        reducer_ranks = range(1, 5)
 
     # MPI setup
     comm = MPI.COMM_WORLD
