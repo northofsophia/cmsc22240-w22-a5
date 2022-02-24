@@ -4,7 +4,7 @@ from mpi4py import MPI
 
 # The input file contains a 100,000x10 matrix.
 # The matrix we are going to use is the first n lines of it, named A.
-# And we are going to compute transpose(A)*A in outer product fashion.
+# And we are going to compute transpose(A)*A.
 # The end result should be a 10x10 matrix.
 # Complete the functions below as directed.
 
