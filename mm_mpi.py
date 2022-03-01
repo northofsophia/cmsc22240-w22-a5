@@ -19,8 +19,16 @@ from mpi4py import MPI
 #   k number of (n//k)x10 submatrices
 def create_submatrices(matrix, k):
     submatrices = []
-    # TODO: complete this function
-    print("Remove me when finish!")
+    a = int(len(matrix) / k)
+    j = 0
+    
+    for i in range(k):
+        if i == k-1:
+            submatrices.append(matrix[j:len(matrix)])
+        else:
+            submatrices.append(matrix[j:a+j])
+        j += a
+
     return submatrices
 
 
