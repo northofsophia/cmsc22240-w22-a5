@@ -41,7 +41,14 @@ def create_submatrices(matrix, k):
 #   A 10x10 partial matrix
 def multiply_rows(matrix):
     partial_matrix = []
-    # TODO: complete this function
+    
+    for k in range(len(matrix)-1):
+        for i in range(len(matrix[0])):
+            row = []
+            for j in range(len(matrix[0])):
+                row.append(matrix[k][i] * matrix[k][j] + matrix[k+1][i] * matrix[k+1][j])
+            partial_matrix.append(row)
+                
     print("Remove me when finish!")
     return partial_matrix
 
