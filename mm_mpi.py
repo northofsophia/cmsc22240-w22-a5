@@ -63,8 +63,16 @@ def multiply_rows(matrix):
 def sum_partial_matrices(part_mat_a, part_mat_b):
     if len(part_mat_a) == 0:
         return part_mat_b
-    # TODO: complete this function
-    print("Remove me when finish!")
+        
+    res = []
+    
+    for i in range(len(part_mat_a)):
+        row = []
+        for j in range(len(part_mat_a[0])):
+            value = part_mat_a[i][j] + part_mat_b[i][j]
+            row.append(value)
+        res.append(row)
+    
     return res
 
 
